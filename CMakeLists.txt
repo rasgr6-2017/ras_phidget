@@ -147,7 +147,7 @@ add_executable(joystick_motor_control src/joystick_motor_control.cpp)
 add_dependencies(joystick_motor_control phidgets_generate_messages_cpp)
 
 add_executable(joystick_servo_control src/joystick_servo_control.cpp)
-add_dependencies(joystick_motor_control phidgets_generate_messages_cpp)
+add_dependencies(joystick_servo_control phidgets_generate_messages_cpp)
 
 add_executable(servo_glimpse src/servo_glimpse.cpp)
 add_dependencies(servo_glimpse phidgets_generate_messages_cpp)
