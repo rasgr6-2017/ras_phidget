@@ -132,6 +132,7 @@ add_executable(stepper_client src/stepper_client.cpp)
 add_dependencies(stepper_client phidgets_generate_messages_cpp)
 
 add_executable(odometry src/odometry.cpp)
+add_dependencies(odometry phidgets_generate_messages_cpp)
 
 add_executable(joystick src/joystick.cpp)
 add_dependencies(joystick phidgets_generate_messages_cpp)
