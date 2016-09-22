@@ -33,13 +33,14 @@
 #include <ros/ros.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <sstream>
 #include <phidget21.h>
 #include <geometry_msgs/Twist.h>
 #include <std_msgs/Float32.h>
 #include <nav_msgs/Odometry.h>
 #include "phidgets/motor_params.h"
-#include "phidgets/encoder_request.h"
+#include "phidgets/motor_encoder.h"
 
 // handle
 CPhidgetMotorControlHandle phid;
@@ -56,6 +57,7 @@ ros::Time last_velocity_command;
 bool motors_active = false;
 bool initialised = false;
 
+/*
 bool enc_req(phidgets::encoder_request::Request &req, phidgets::encoder_request::Response &res){
   int enc_count = 0;
   if (req.cmd == 0){
@@ -67,6 +69,7 @@ bool enc_req(phidgets::encoder_request::Request &req, phidgets::encoder_request:
     res.enc = enc_count;
   }
 }
+*/
 
 int AttachHandler(CPhidgetHandle phid, void *userptr)
 {
@@ -284,24 +287,34 @@ int main(int argc, char* argv[])
     n.advertise<phidgets::motor_params>(topic_name, buffer_length);
 
     std::string cmd_vel_top = name + "/" + "cmd_vel";
-    std::string enc_req_name = name + "/" + "encoder_request";
+    std::string encoder_topic = name + "/" + "encoder";
 
 
     // receive velocity commands
     ros::Subscriber command_velocity_sub =
     n.subscribe(cmd_vel_top.data(), 1, velocityCommandCallback);
 
-    ros::ServiceServer service = n.advertiseService(enc_req_name.data(), enc_req);
-
-
+    ros::Publisher encoder_pub = n.advertise<phidgets::motor_encoder>(encoder_topic, buffer_length);
 
     initialised = true;
     ros::Rate loop_rate(frequency);
-
+    int prev_count = 0, enc_count = 0;
+    phidgets::motor_encoder encoder_msg;
+    CPhidgetMotorControl_getEncoderPosition(phid,0, &(prev_count));
     while (ros::ok()) {
       ros::spinOnce();
       loop_rate.sleep();
 
+      encoder_msg.header.stamp = ros::Time::now();
+      CPhidgetMotorControl_getEncoderPosition(phid,0, &(enc_count));
+      encoder_msg.header.seq++;
+      encoder_msg.count = enc_count;
+      int delta_tic = enc_count-prev_count;
+      if (!(abs(delta_tic) > INT_MAX/2)){
+        encoder_msg.count_change = delta_tic;
+      }
+      prev_count = enc_count;
+      encoder_pub.publish(encoder_msg);
 
       // SAFETY FEATURE
       // if a velocity command has not been received

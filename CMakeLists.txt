@@ -21,7 +21,6 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${CMAKE_CURRENT_BINARY_DIR}
-
 )
 
 ## Generate messages in the 'msg' folder
@@ -43,6 +42,7 @@ include_directories(
    stepper_params.msg
    textlcd_params.msg
    interface_kit_params.msg
+   motor_encoder.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -52,7 +52,6 @@ include_directories(
    lidar_control.srv
    pid.srv
    servo_reference.srv
-   encoder_request.srv
  )
 
 ## Generate actions in the 'action' folder
