@@ -42,34 +42,51 @@
 #include "phidgets/motor_params.h"
 #include "phidgets/motor_encoder.h"
 
+// Motor::Motor()
+// {
+//   node_handle_ = ros::NodeHandle("~");
+//   if(!node_handle_.getParam("serial", serial_number_))
+//   {
+//     ROS_ERROR("Motor requires a serial number to be initialized!");
+//     exit(-1);
+//   }
+//
+//   if(!node_handle_.getParam("name", motor_name_))
+//   {
+//     motor_name_ = "default_motor";
+//   }
+//
+//   if(!node_handle_.getParam("default_topic_path", topic_path_))
+//   {
+//
+//   }
+//
+//   node_handle_.getParam("motor_acceleration", acceleration_);
+//   node_handle_.getParam("invert_motor", invert_motor_);
+//   node_handle_.getParam("default_timeout", timeout_sec_);
+//   node_handle_.getParam("default_frequency", frequency_);
+//   motors_active_ = false;
+//   initialised_ = false;
+//
+//   float timeout_sec = 0.5;
+//   nh.getParam("timeout", timeout_sec);
+//   int frequency = 30;
+//   nh.getParam("frequency", frequency);
+// }
+
 // handle
 CPhidgetMotorControlHandle phid;
 
 // motor controller state publisher
 ros::Publisher motor_pub;
-
-// motor velocity publisher
-ros::Publisher motor_vel_pub;
+ros::Publisher encoder_pub;
 
 float acceleration = 20;
 bool invert_motor = false;
 ros::Time last_velocity_command;
 bool motors_active = false;
 bool initialised = false;
-
-/*
-bool enc_req(phidgets::encoder_request::Request &req, phidgets::encoder_request::Response &res){
-  int enc_count = 0;
-  if (req.cmd == 0){
-    CPhidgetMotorControl_getEncoderPosition(phid,0, &(enc_count));
-    CPhidgetMotorControl_setEncoderPosition(phid, 0, 0);
-    res.enc = enc_count;
-  }else{
-    CPhidgetMotorControl_getEncoderPosition(phid,0, &(enc_count));
-    res.enc = enc_count;
-  }
-}
-*/
+int encoder_seq = 0;
 
 int AttachHandler(CPhidgetHandle phid, void *userptr)
 {
@@ -97,7 +114,7 @@ int DetachHandler(CPhidgetHandle phid, void *userptr)
 
 int ErrorHandler(CPhidgetHandle phid, void *userptr, int ErrorCode, const char *Description)
 {
-  ROS_INFO("Error handled. %d - %s", ErrorCode, Description);
+  ROS_ERROR("Error handled. %d - %s", ErrorCode, Description);
   return 0;
 }
 
@@ -108,7 +125,7 @@ int InputChangeHandler(CPhidgetMotorControlHandle MC, void *usrptr, int Index, i
   m.value_type = 1;
   m.value = (float)State;
   if (initialised) motor_pub.publish(m);
-  //ROS_INFO("Motor input %d Inputs %d", Index, State);
+  // ROS_INFO("Motor input %d Inputs %d", Index, State);
   return 0;
 }
 
@@ -119,7 +136,7 @@ int VelocityChangeHandler(CPhidgetMotorControlHandle MC, void *usrptr, int Index
   m.value_type = 2;
   m.value = (float)Value;
   if (initialised) motor_pub.publish(m);
-  //ROS_INFO("Motor %d Velocity %.2f", Index, (float)Value);
+  // ROS_INFO("Motor %d Velocity %.2f", Index, (float)Value);
   return 0;
 }
 
@@ -130,8 +147,24 @@ int CurrentChangeHandler(CPhidgetMotorControlHandle MC, void *usrptr, int Index,
   m.value_type = 3;
   m.value = (float)Value;
   if (initialised) motor_pub.publish(m);
-  //ROS_INFO("Motor %d Current %.2f", Index, (float)Value);
+  // ROS_INFO("Motor %d Current %.2f", Index, (float)Value);
   return 0;
+}
+
+int EncoderPositionHandler(CPhidgetMotorControlHandle phid, void *usrptr, int index, int position_change)
+{
+  if(initialised)
+  {
+    phidgets::motor_encoder encoder_msg;
+    encoder_msg.header.stamp = ros::Time::now();
+    encoder_msg.header.seq = encoder_seq++;
+
+    CPhidgetMotorControl_getEncoderPosition(phid, index, &(encoder_msg.count));
+    encoder_msg.count_change = position_change;
+
+    encoder_pub.publish(encoder_msg);
+    // ROS_INFO("Encoder: %d", position_change);
+  }
 }
 
 int display_properties(CPhidgetMotorControlHandle phid)
@@ -185,6 +218,9 @@ bool attach(CPhidgetMotorControlHandle &phid, int serial_number)
   // that will be called, and a arbitrary pointer that
   // will be supplied to the callback function (may be NULL).
   CPhidgetMotorControl_set_OnCurrentChange_Handler (phid, CurrentChangeHandler, NULL);
+
+  // Register the most recent encoder position
+  CPhidgetMotorControl_set_OnEncoderPositionUpdate_Handler (phid, EncoderPositionHandler, NULL);
 
   //open the device for connections
   CPhidget_open((CPhidgetHandle)phid, serial_number);
@@ -269,6 +305,7 @@ int main(int argc, char* argv[])
   int frequency = 30;
   nh.getParam("frequency", frequency);
 
+
   if (attach(phid, serial_number)) {
     display_properties(phid);
 
@@ -288,33 +325,19 @@ int main(int argc, char* argv[])
 
     std::string cmd_vel_top = name + "/" + "cmd_vel";
     std::string encoder_topic = name + "/" + "encoder";
+    encoder_pub = n.advertise<phidgets::motor_encoder>(encoder_topic, buffer_length);
 
 
     // receive velocity commands
     ros::Subscriber command_velocity_sub =
     n.subscribe(cmd_vel_top.data(), 1, velocityCommandCallback);
 
-    ros::Publisher encoder_pub = n.advertise<phidgets::motor_encoder>(encoder_topic, buffer_length);
 
     initialised = true;
     ros::Rate loop_rate(frequency);
-    int prev_count = 0, enc_count = 0;
-    phidgets::motor_encoder encoder_msg;
-    CPhidgetMotorControl_getEncoderPosition(phid,0, &(prev_count));
     while (ros::ok()) {
       ros::spinOnce();
       loop_rate.sleep();
-
-      encoder_msg.header.stamp = ros::Time::now();
-      CPhidgetMotorControl_getEncoderPosition(phid,0, &(enc_count));
-      encoder_msg.header.seq++;
-      encoder_msg.count = enc_count;
-      int delta_tic = enc_count-prev_count;
-      if (!(abs(delta_tic) > INT_MAX/2)){
-        encoder_msg.count_change = delta_tic;
-      }
-      prev_count = enc_count;
-      encoder_pub.publish(encoder_msg);
 
       // SAFETY FEATURE
       // if a velocity command has not been received
