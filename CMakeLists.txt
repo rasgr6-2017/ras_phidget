@@ -54,12 +54,4 @@ catkin_package(
 add_executable(motor src/motor.cpp)
 add_dependencies(motor phidgets_generate_messages_cpp)
 
-add_executable(lidar src/lidar.cpp)
-add_dependencies(lidar phidgets_generate_messages_cpp)
-
-add_executable(lidar_client src/lidar_client.cpp)
-add_dependencies(lidar_client phidgets_generate_messages_cpp)
-
 target_link_libraries(motor phidget21 ${catkin_LIBRARIES})
-target_link_libraries(lidar phidget21 ${catkin_LIBRARIES})
-target_link_libraries(lidar_client phidget21 ${catkin_LIBRARIES})
