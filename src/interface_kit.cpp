@@ -1,4 +1,4 @@
-/*********************************************************************
+/********************************************************************* 
  * Software License Agreement (BSD License)
  *
  *  ROS driver for Phidgets interface kit
@@ -151,7 +151,7 @@ int display_properties(CPhidgetInterfaceKitHandle phid)
     ROS_INFO("Number of sensors %d", num_sensors);
     ROS_INFO("Ratiometric %d", ratiometric);
 
-    for (int i = 0; i < num_sensors; i++) {       
+    for (int i = 0; i < num_sensors; i++) {
 		CPhidgetInterfaceKit_getSensorChangeTrigger (phid,
 													 i,
 													 &triggerVal);
@@ -295,7 +295,7 @@ int main(int argc, char* argv[])
     if (attach(phid, serial_number)) {
 		display_properties(phid);
 
-        const int buffer_length = 100;        
+        const int buffer_length = 100;
         std::string topic_name = topic_path + name;
         std::string service_name = "interface_kit";
         if (serial_number > -1) {
@@ -326,4 +326,3 @@ int main(int argc, char* argv[])
     }
     return 0;
 }
-

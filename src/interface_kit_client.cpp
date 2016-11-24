@@ -1,4 +1,4 @@
-/*********************************************************************
+/********************************************************************* 
  * Software License Agreement (BSD License)
  *
  *  Example ROS subscription to Phidgets interface kit
@@ -132,4 +132,3 @@ int main(int argc, char** argv)
 	ros::spin();
 	return 0;
 }
-
