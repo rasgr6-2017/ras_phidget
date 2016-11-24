@@ -28,12 +28,14 @@ include_directories(
    FILES
    motor_params.msg
    motor_encoder.msg
+   interface_kit_params.msg
  )
 
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
    lidar_control.srv
+   interface_kit.srv
  )
 
 generate_messages(
@@ -51,7 +53,15 @@ catkin_package(
   DEPENDS
 )
 
+add_executable(interface_kit src/interface_kit.cpp)
+add_dependencies(interface_kit phidgets_generate_messages_cpp)
+
+add_executable(interface_kit_client src/interface_kit_client.cpp)
+add_dependencies(interface_kit_client phidgets_generate_messages_cpp)
+
 add_executable(motor src/motor.cpp)
 add_dependencies(motor phidgets_generate_messages_cpp)
 
 target_link_libraries(motor phidget21 ${catkin_LIBRARIES})
+target_link_libraries(interface_kit phidget21 ${catkin_LIBRARIES})
+target_link_libraries(interface_kit_client phidget21 ${catkin_LIBRARIES})
