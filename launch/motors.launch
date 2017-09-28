@@ -1,0 +1,10 @@
+<launch>
+    <node name="motor_left" pkg="phidgets" type="motor">
+        <param name="serial" type="int" value="473030" />
+        <remap from="/motorcontrol/cmd_vel" to="/motorcontrol/cmd_vel_left" />
+    </node>
+    <node name="motor_right" pkg="phidgets" type="motor">
+        <param name="serial" type="int" value="470088" />
+        <remap from="/motorcontrol/cmd_vel" to="/motorcontrol/cmd_vel_right" />
+    </node>
+</launch>
